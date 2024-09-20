@@ -7,7 +7,7 @@ use galileo::layer::feature_layer::{Feature, FeatureLayer};
 use galileo::render::point_paint::PointPaint;
 use galileo::render::render_bundle::RenderPrimitive;
 use galileo::tile_scheme::TileSchema;
-use galileo::MapBuilder;
+use galileo::{GalileoResult, MapBuilder};
 use galileo_types::cartesian::{CartesianPoint3d, Point2d};
 use galileo_types::geo::{Crs, Projection};
 use galileo_types::geometry::Geom;
@@ -84,7 +84,18 @@ impl CartesianGeometry2d<Point2d> for PointMarker {
 
 struct ColoredPointSymbol {}
 
-pub async fn run(builder: MapBuilder) {
+pub async fn run(builder: MapBuilder) -> GalileoResult<()> {
+    let attr = winit::window::Window::default_attributes()
+        .with_title("Galileo Highlight Features")
+        .with_transparent(true)
+        .with_inner_size(winit::dpi::PhysicalSize {
+            height: 1024,
+            width: 1024,
+        });
+    let event_loop = winit::event_loop::EventLoop::new()?;
+    let window = event_loop.create_window(attr)?;
+    let window = Arc::new(window);
+
     #[cfg(not(target_arch = "wasm32"))]
     let builder = builder.with_raster_tiles(
         |index| {
@@ -145,9 +156,10 @@ pub async fn run(builder: MapBuilder) {
             }
             galileo::control::EventPropagation::Propagate
         })
-        .build()
+        .build(window)
         .await
-        .run();
+        .run(event_loop)?;
+    Ok(())
 }
 
 impl Symbol<PointMarker> for ColoredPointSymbol {

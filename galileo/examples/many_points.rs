@@ -4,18 +4,20 @@ use galileo::render::point_paint::PointPaint;
 use galileo::render::render_bundle::RenderPrimitive;
 #[cfg(not(target_arch = "wasm32"))]
 use galileo::tile_scheme::TileSchema;
-use galileo::{Color, MapBuilder};
+use galileo::{Color, GalileoResult, MapBuilder};
 use galileo_types::cartesian::{CartesianPoint3d, Point3d};
 use galileo_types::geo::Crs;
 use galileo_types::geometry::Geom;
 use galileo_types::impls::{Contour, Polygon};
 use num_traits::AsPrimitive;
+use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
-async fn main() {
+async fn main() -> GalileoResult<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    run(MapBuilder::new()).await;
+    run(MapBuilder::new()).await?;
+    Ok(())
 }
 
 struct ColoredPoint {
@@ -83,7 +85,18 @@ fn generate_points() -> Vec<ColoredPoint> {
     points
 }
 
-pub async fn run(builder: MapBuilder) {
+pub async fn run(builder: MapBuilder) -> GalileoResult<()> {
+    let attr = winit::window::Window::default_attributes()
+        .with_title("Galileo Many Points")
+        .with_transparent(true)
+        .with_inner_size(winit::dpi::PhysicalSize {
+            height: 1024,
+            width: 1024,
+        });
+    let event_loop = winit::event_loop::EventLoop::new()?;
+    let window = event_loop.create_window(attr)?;
+    let window = Arc::new(window);
+
     #[cfg(not(target_arch = "wasm32"))]
     let builder = builder.with_raster_tiles(
         |index| {
@@ -106,7 +119,8 @@ pub async fn run(builder: MapBuilder) {
             ColoredPointSymbol {},
             Crs::EPSG3857,
         ))
-        .build()
+        .build(window)
         .await
-        .run();
+        .run(event_loop)?;
+    Ok(())
 }

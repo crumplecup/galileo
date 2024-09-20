@@ -3,6 +3,8 @@
 use galileo_mvt::error::GalileoMvtError;
 use thiserror::Error;
 
+pub type GalileoResult<T> = Result<T, GalileoError>;
+
 #[cfg(not(target_arch = "wasm32"))]
 use image::ImageError;
 
@@ -29,8 +31,14 @@ pub enum GalileoError {
     #[error("{0}")]
     Generic(String),
     /// Error reading/writing data to the FS.
-    #[error("failed to read file")]
+    #[error("failed to read file: {0}")]
     FsIo(#[from] std::io::Error),
+    /// Converts errors from the `winit` crate.
+    #[error("Event loop error: {0}")]
+    WinitEventLoop(#[from] winit::error::EventLoopError),
+    /// Converts errors from the `winit` crate.
+    #[error("OS error: {0}")]
+    WinitOs(#[from] winit::error::OsError),
 }
 
 #[cfg(not(target_arch = "wasm32"))]

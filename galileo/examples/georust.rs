@@ -1,19 +1,21 @@
 use galileo::layer::feature_layer::{FeatureLayer, FeatureLayerOptions};
 use galileo::symbol::ImagePointSymbol;
 use galileo::tile_scheme::TileSchema;
-use galileo::MapBuilder;
+use galileo::{GalileoResult, MapBuilder};
 use galileo_types::geo::Crs;
 use galileo_types::geometry_type::GeoSpace2d;
 use galileo_types::{latlon, Disambig, Disambiguate};
 use geozero::geojson::GeoJson;
 use geozero::ToGeo;
 use nalgebra::Vector2;
+use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
-async fn main() {
+async fn main() -> GalileoResult<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    run(MapBuilder::new()).await;
+    run(MapBuilder::new()).await?;
+    Ok(())
 }
 
 fn load_points() -> Vec<Disambig<geo_types::Point, GeoSpace2d>> {
@@ -31,7 +33,17 @@ fn load_points() -> Vec<Disambig<geo_types::Point, GeoSpace2d>> {
     }
 }
 
-pub async fn run(builder: MapBuilder) {
+pub async fn run(builder: MapBuilder) -> GalileoResult<()> {
+    let attr = winit::window::Window::default_attributes()
+        .with_title("Galileo + Georust")
+        .with_transparent(true)
+        .with_inner_size(winit::dpi::PhysicalSize {
+            height: 1024,
+            width: 1024,
+        });
+    let event_loop = winit::event_loop::EventLoop::new()?;
+    let window = event_loop.create_window(attr)?;
+    let window = Arc::new(window);
     let point_layer = FeatureLayer::new(
         load_points(),
         ImagePointSymbol::from_path(
@@ -60,7 +72,8 @@ pub async fn run(builder: MapBuilder) {
             TileSchema::web(18),
         )
         .with_layer(point_layer)
-        .build()
+        .build(window)
         .await
-        .run();
+        .run(event_loop)?;
+    Ok(())
 }

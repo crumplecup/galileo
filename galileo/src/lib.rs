@@ -72,7 +72,7 @@ pub(crate) mod async_runtime;
 mod color;
 pub mod control;
 pub mod decoded_image;
-pub mod error;
+mod error;
 pub mod layer;
 mod lod;
 mod map;
@@ -91,6 +91,7 @@ mod galileo_map;
 pub use galileo_map::{GalileoMap, MapBuilder};
 
 pub use color::Color;
+pub use error::{GalileoError, GalileoResult};
 pub use layer::feature_layer::symbol;
 pub use lod::Lod;
 pub use map::{LayerCollection, Map};

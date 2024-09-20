@@ -4,7 +4,6 @@ use galileo::render::point_paint::PointPaint;
 use galileo::render::render_bundle::RenderPrimitive;
 use galileo::symbol::Symbol;
 use galileo::tile_scheme::TileSchema;
-use galileo::Color;
 /// This example demonstrates rendering of 19_000_000 points from lidar scanning on the map. To be run it requires
 /// a file `Clifton_Suspension_Bridge.laz` to be added to the `./data` directory. This file is too large to be added
 /// to git repository, but it can be downloaded from https://geoslam.com/sample-data/
@@ -14,6 +13,7 @@ use galileo::Color;
 /// data should probably be preprocessed, as many of those 19M points have virtually the same coordinate. These
 /// optimizations may be done by Galileo in future, but at this point it's up to the application.
 use galileo::MapBuilder;
+use galileo::{Color, GalileoResult};
 use galileo_types::cartesian::{CartesianPoint3d, Point3d};
 use galileo_types::geo::Crs;
 use galileo_types::geometry::Geom;
@@ -22,12 +22,14 @@ use galileo_types::latlon;
 use las::Read;
 use nalgebra::{Rotation3, Translation3, Vector3};
 use num_traits::AsPrimitive;
+use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
-async fn main() {
+async fn main() -> GalileoResult<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    run(MapBuilder::new()).await;
+    run(MapBuilder::new()).await?;
+    Ok(())
 }
 
 fn load_points() -> Vec<ColoredPoint> {
@@ -107,7 +109,18 @@ impl Symbol<ColoredPoint> for ColoredPointSymbol {
     }
 }
 
-pub async fn run(builder: MapBuilder) {
+pub async fn run(builder: MapBuilder) -> GalileoResult<()> {
+    let attr = winit::window::Window::default_attributes()
+        .with_title("Galileo LAS")
+        .with_transparent(true)
+        .with_inner_size(winit::dpi::PhysicalSize {
+            height: 1024,
+            width: 1024,
+        });
+    let event_loop = winit::event_loop::EventLoop::new()?;
+    let window = event_loop.create_window(attr)?;
+    let window = Arc::new(window);
+
     let points = load_points();
     builder
         .center(latlon!(51.4549, -2.6279))
@@ -129,7 +142,8 @@ pub async fn run(builder: MapBuilder) {
                 },
             ),
         )
-        .build()
+        .build(window)
         .await
-        .run();
+        .run(event_loop)?;
+    Ok(())
 }

@@ -13,15 +13,7 @@ use galileo_types::geo::impls::GeoPoint2d;
 impl MapBuilder {
     /// Creates a new instance.
     pub fn new() -> Self {
-        Self {
-            position: GeoPoint2d::default(),
-            resolution: 156543.03392800014 / 16.0,
-            view: None,
-            layers: vec![],
-            event_handlers: vec![],
-            window: None,
-            event_loop: None,
-        }
+        Self::default()
     }
 
     /// Create a new raster tile layer.

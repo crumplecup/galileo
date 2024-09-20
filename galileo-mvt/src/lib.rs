@@ -254,6 +254,7 @@ impl MvtFeature {
             geometry,
         })
     }
+
     fn decode_properties(
         tags: Vec<u32>,
         keys: &[String],
@@ -419,6 +420,7 @@ impl MvtFeature {
 
                     // Since tile vectors have y axis pointing down, clockwiseness is also reversed
                     // here.
+                    use galileo_types::impls::ClosedContour;
                     if let Some(mut polygon) = curr_polygon.take() {
                         match curr.winding() {
                             Winding::CounterClockwise => {
@@ -500,8 +502,8 @@ impl<T: Iterator<Item = u32>> CommandIterator<T> {
     fn read_point(&mut self) -> Result<Point, GalileoMvtError> {
         let vals = self.read_vals::<2>()?;
         Ok(Point::new(
-            self.decode_sint_coord(vals[0]) + self.cursor.x(),
-            self.decode_sint_coord(vals[1]) + self.cursor.y(),
+            self.decode_sint_coord(vals[0]) + self.cursor.x,
+            self.decode_sint_coord(vals[1]) + self.cursor.y,
         ))
     }
 

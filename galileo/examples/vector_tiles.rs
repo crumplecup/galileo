@@ -2,7 +2,7 @@ use galileo::control::{EventPropagation, MouseButton, UserEvent};
 use galileo::layer::vector_tile_layer::style::VectorTileStyle;
 use galileo::layer::vector_tile_layer::VectorTileLayer;
 use galileo::tile_scheme::{TileIndex, TileSchema, VerticalDirection};
-use galileo::{Lod, MapBuilder};
+use galileo::{GalileoResult, Lod, MapBuilder};
 use galileo_types::cartesian::Point2d;
 use galileo_types::geo::Crs;
 use std::sync::{Arc, RwLock};
@@ -46,12 +46,24 @@ thread_local!(
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
-async fn main() {
+async fn main() -> GalileoResult<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    run(MapBuilder::new(), get_layer_style().unwrap()).await;
+    run(MapBuilder::new(), get_layer_style().unwrap()).await?;
+    Ok(())
 }
 
-pub async fn run(builder: MapBuilder, style: VectorTileStyle) {
+pub async fn run(builder: MapBuilder, style: VectorTileStyle) -> GalileoResult<()> {
+    let attr = winit::window::Window::default_attributes()
+        .with_title("Galileo Vector Tiles")
+        .with_transparent(true)
+        .with_inner_size(winit::dpi::PhysicalSize {
+            height: 1024,
+            width: 1024,
+        });
+    let event_loop = winit::event_loop::EventLoop::new()?;
+    let window = event_loop.create_window(attr)?;
+    let window = Arc::new(window);
+
     let layer = LAYER.with(|v| v.clone());
     layer.write().unwrap().update_style(style);
 
@@ -74,9 +86,10 @@ pub async fn run(builder: MapBuilder, style: VectorTileStyle) {
             }
             _ => EventPropagation::Propagate,
         })
-        .build()
+        .build(window)
         .await
-        .run();
+        .run(event_loop)?;
+    Ok(())
 }
 
 pub fn tile_scheme() -> TileSchema {

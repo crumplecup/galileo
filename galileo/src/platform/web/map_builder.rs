@@ -41,15 +41,7 @@ impl MapBuilder {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
         console_log::init_with_level(log::Level::Info).expect("Couldn't init logger");
 
-        Self {
-            position: GeoPoint2d::default(),
-            resolution: 156543.03392800014 / 16.0,
-            view: None,
-            layers: vec![],
-            event_handlers: vec![],
-            window: None,
-            event_loop: None,
-        }
+        Self::default()
     }
 
     /// Builds the map and adds it to the given parent HTML element.

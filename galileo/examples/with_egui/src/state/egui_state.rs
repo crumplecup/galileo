@@ -27,16 +27,17 @@ impl EguiState {
         let id = egui_context.viewport_id();
 
         let visuals = Default::default();
-        egui_context.set_visuals(visuals);
+        egui_context.set_visuals_of(egui::Theme::Dark, visuals);
         egui_context.set_pixels_per_point(window.scale_factor() as f32);
 
-        let egui_state = State::new(egui_context.clone(), id, &window, None, None);
+        let egui_state = State::new(egui_context.clone(), id, &window, None, None, None);
 
         let egui_renderer = Renderer::new(
             device,
             output_color_format,
             output_depth_format,
             msaa_samples,
+            false,
         );
 
         EguiState {
@@ -55,7 +56,7 @@ impl EguiState {
         response
     }
 
-    pub fn render(&mut self, wgpu_frame: &mut WgpuFrame<'_>, run_ui: impl FnOnce(&Context)) {
+    pub fn render(&mut self, wgpu_frame: &mut WgpuFrame<'_>, run_ui: impl FnMut(&Context)) {
         let screen_descriptor = ScreenDescriptor {
             size_in_pixels: [wgpu_frame.size.width, wgpu_frame.size.height],
             pixels_per_point: wgpu_frame.window.scale_factor() as f32,

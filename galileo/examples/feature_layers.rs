@@ -4,7 +4,7 @@ use galileo::layer::feature_layer::symbol::{SimplePolygonSymbol, Symbol};
 use galileo::layer::feature_layer::FeatureLayer;
 use galileo::render::point_paint::PointPaint;
 use galileo::render::render_bundle::RenderPrimitive;
-use galileo::{Color, MapBuilder};
+use galileo::{Color, GalileoResult, MapBuilder};
 use galileo_types::cartesian::CartesianPoint3d;
 use galileo_types::geo::Crs;
 use galileo_types::geometry::Geom;
@@ -17,9 +17,10 @@ mod data;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
-async fn main() {
+async fn main() -> GalileoResult<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    run(MapBuilder::new()).await;
+    run(MapBuilder::default()).await?;
+    Ok(())
 }
 
 pub fn load_countries() -> Vec<Country> {
@@ -46,14 +47,24 @@ pub fn load_cities() -> Vec<City> {
     cities
 }
 
-pub async fn run(builder: MapBuilder) {
+pub async fn run(builder: MapBuilder) -> GalileoResult<()> {
+    let attr = winit::window::Window::default_attributes()
+        .with_title("Galileo Feature Layers")
+        .with_transparent(true)
+        .with_inner_size(winit::dpi::PhysicalSize {
+            height: 1024,
+            width: 1024,
+        });
+    let event_loop = winit::event_loop::EventLoop::new()?;
+    let window = event_loop.create_window(attr)?;
+    let window = Arc::new(window);
     let countries = load_countries();
 
     let feature_layer = FeatureLayer::with_lods(
         countries,
         CountrySymbol {},
         Crs::EPSG3857,
-        &vec![8000.0, 1000.0, 1.0],
+        &[8000.0, 1000.0, 1.0],
     );
     let feature_layer = Arc::new(RwLock::new(feature_layer));
 
@@ -128,9 +139,10 @@ pub async fn run(builder: MapBuilder) {
 
             EventPropagation::Propagate
         })
-        .build()
+        .build(window)
         .await
-        .run();
+        .run(event_loop)?;
+    Ok(())
 }
 
 struct CountrySymbol {}

@@ -9,9 +9,7 @@ use winit::{
 mod run_ui;
 mod state;
 
-pub async fn run(window: Window, event_loop: EventLoop<()>) {
-    let window = Arc::new(window);
-
+pub async fn run(window: Arc<Window>, event_loop: EventLoop<()>) {
     let mut state = state::State::new(Arc::clone(&window)).await;
 
     let _ = event_loop.run(move |event, ewlt| {
