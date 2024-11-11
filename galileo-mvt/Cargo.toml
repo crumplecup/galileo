@@ -19,8 +19,8 @@ bytes = "1.8.0"
 prost = "0.13.3"
 galileo-types = { path = "../galileo-types", version = "0.1.1" }
 log = "0.4.22"
-serde = { version = "1.0.214", features = ["derive"] }
-thiserror = "2.0.1"
+serde = { version = "1.0.215", features = ["derive"] }
+thiserror = "2.0.3"
 nalgebra = { version = "0.33.2", features = ["serde-serialize"] }
 geozero = { version = "0.14.0", features = ["with-mvt"] }
 

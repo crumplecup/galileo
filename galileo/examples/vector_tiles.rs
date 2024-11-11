@@ -1,28 +1,19 @@
 use galileo::control::{EventPropagation, MouseButton, UserEvent};
 use galileo::layer::vector_tile_layer::style::VectorTileStyle;
-use galileo::layer::vector_tile_layer::VectorTileLayer;
 use galileo::tile_scheme::{TileIndex, TileSchema, VerticalDirection};
 use galileo::{GalileoResult, Lod, MapBuilder};
 use galileo_types::cartesian::Point2d;
+use galileo_types::cartesian::Rect;
 use galileo_types::geo::Crs;
 use std::sync::{Arc, RwLock};
 
-#[cfg(not(target_arch = "wasm32"))]
-use galileo::layer::{
-    data_provider::{FileCacheController, UrlDataProvider},
-    vector_tile_layer::tile_provider::{ThreadedProvider, VtProcessor},
-};
-
-#[cfg(not(target_arch = "wasm32"))]
-type VectorTileProvider =
-    ThreadedProvider<UrlDataProvider<TileIndex, VtProcessor, FileCacheController>>;
+#[cfg(target_arch = "wasm32")]
+use galileo::layer::data_provider::dummy::DummyCacheController;
+#[cfg(target_arch = "wasm32")]
+use galileo::platform::web::vt_processor::WebWorkerVtProcessor;
 
 #[cfg(target_arch = "wasm32")]
-use galileo::layer::vector_tile_layer::tile_provider::WebWorkerVectorTileProvider;
-use galileo_types::cartesian::Rect;
-
-#[cfg(target_arch = "wasm32")]
-type VectorTileProvider = WebWorkerVectorTileProvider;
+type VtLayer = VectorTileLayer<WebVtLoader<DummyCacheController>, WebWorkerVtProcessor>;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn get_layer_style() -> Option<VectorTileStyle> {
@@ -30,29 +21,28 @@ fn get_layer_style() -> Option<VectorTileStyle> {
     serde_json::from_reader(std::fs::File::open(STYLE).ok()?).ok()
 }
 
-thread_local!(
-    pub static LAYER: Arc<RwLock<VectorTileLayer<VectorTileProvider>>> =
-        Arc::new(RwLock::new(MapBuilder::create_vector_tile_layer(
-            |&index: &TileIndex| {
-                format!(
-                    "https://d1zqyi8v6vm8p9.cloudfront.net/planet/{}/{}/{}.mvt",
-                    index.z, index.x, index.y
-                )
-            },
-            tile_scheme(),
-            VectorTileStyle::default(),
-        )));
-);
-
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
+<<<<<<< HEAD
 async fn main() -> GalileoResult<()> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    run(MapBuilder::new(), get_layer_style().unwrap()).await?;
+    let Some(api_key) = std::env::var_os("VT_API_KEY") else {
+        eprintln!("You must set VT_API_KEY environment variable with a valid MapTiler API key to run this example");
+        eprintln!("You can obtain your free API key at https://maptiler.com");
+
+        return;
+    };
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("galileo=trace"))
+        .init();
+    run(
+        MapBuilder::new(),
+        get_layer_style().unwrap(),
+        api_key.into_string().expect("invalid VT API key"),
+    )
+    .await?;
     Ok(())
 }
 
-pub async fn run(builder: MapBuilder, style: VectorTileStyle) -> GalileoResult<()> {
+pub async fn run(builder: MapBuilder, style: VectorTileStyle, api_key: String) -> GalileoResult<()> {
     let attr = winit::window::Window::default_attributes()
         .with_title("Galileo Vector Tiles")
         .with_transparent(true)
@@ -64,7 +54,20 @@ pub async fn run(builder: MapBuilder, style: VectorTileStyle) -> GalileoResult<(
     let window = event_loop.create_window(attr)?;
     let window = Arc::new(window);
 
-    let layer = LAYER.with(|v| v.clone());
+    let layer =
+        Arc::new(RwLock::new(
+            MapBuilder::create_vector_tile_layer(
+                move |&index: &TileIndex| {
+                    format!(
+                    "https://api.maptiler.com/tiles/v3-openmaptiles/{z}/{x}/{y}.pbf?key={api_key}",
+                    z = index.z, x = index.x, y = index.y
+                )
+                },
+                tile_scheme(),
+                style,
+            )
+            .await,
+        ));
     layer.write().unwrap().update_style(style);
 
     builder
