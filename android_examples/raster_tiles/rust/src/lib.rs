@@ -1,3 +1,4 @@
+#![cfg(target_os = "android")]
 extern crate galileo;
 extern crate tokio;
 
@@ -6,7 +7,6 @@ use galileo::{MapBuilder, TileSchema};
 use galileo_types::latlon;
 use tokio::runtime::Runtime;
 
-#[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;

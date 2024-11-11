@@ -1,6 +1,7 @@
 use std::{iter, sync::Arc};
 
 use crate::run_ui::{run_ui, UiState};
+use crate::UserEvent;
 
 use wgpu::TextureView;
 use winit::{event::*, window::Window};
@@ -29,10 +30,14 @@ pub struct State {
     pub egui_state: EguiState,
     pub galileo_state: GalileoState,
     pub ui_state: UiState,
+    pub proxy: winit::event_loop::EventLoopProxy<UserEvent>,
 }
 
 impl State {
-    pub async fn new(window: Arc<Window>) -> Self {
+    pub async fn new(
+        window: Arc<Window>,
+        proxy: winit::event_loop::EventLoopProxy<UserEvent>,
+    ) -> Self {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -116,11 +121,16 @@ impl State {
             egui_state,
             galileo_state,
             ui_state: UiState::default(),
+            proxy,
         }
     }
 
     pub fn window(&self) -> &Window {
         &self.window
+    }
+
+    pub fn map_mut(&mut self) -> &mut GalileoState {
+        &mut self.galileo_state
     }
 
     pub fn about_to_wait(&mut self) {
@@ -139,16 +149,19 @@ impl State {
 
     pub fn handle_event(&mut self, event: &WindowEvent) {
         let res = self.egui_state.handle_event(&self.window, event);
+        // instead of calling from State, we have to call this from App
 
         if !res.consumed {
-            self.galileo_state.handle_event(event);
+            self.proxy.send_event(UserEvent::Map(event.clone()));
+            //     self.galileo_state.handle_event(event);
         }
 
-        self.window().request_redraw();
+        // self.window().request_redraw();
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.ui_state.positions = self.galileo_state.positions();
+        tracing::info!("Positions: {:#?}", self.ui_state.positions);
 
         let texture = self.surface.get_current_texture()?;
 
@@ -169,25 +182,28 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
-        {
-            let mut wgpu_frame = WgpuFrame {
-                device: &self.device,
-                queue: &self.queue,
-                encoder: &mut encoder,
-                window: &self.window,
-                texture_view: &texture_view,
-                size: self.size,
-            };
+        let mut wgpu_frame = WgpuFrame {
+            device: &self.device,
+            queue: &self.queue,
+            encoder: &mut encoder,
+            window: &self.window,
+            texture_view: &texture_view,
+            size: self.size,
+        };
+        tracing::info!("WGPU frame built.");
 
-            self.galileo_state.render(&wgpu_frame);
+        self.galileo_state.render(&wgpu_frame);
+        tracing::info!("Galileo state rendered.");
 
-            self.egui_state
-                .render(&mut wgpu_frame, |ui| run_ui(&mut self.ui_state, ui));
-        }
+        self.egui_state
+            .render(&mut wgpu_frame, |ui| run_ui(&mut self.ui_state, ui));
+        tracing::info!("Egui state rendered.");
 
         self.queue.submit(iter::once(encoder.finish()));
+        tracing::info!("Encoding finished.");
 
         texture.present();
+        tracing::info!("Texture presented.");
 
         Ok(())
     }

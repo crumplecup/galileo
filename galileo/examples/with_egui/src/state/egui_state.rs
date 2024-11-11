@@ -89,23 +89,23 @@ impl EguiState {
         );
 
         {
-            let mut render_pass =
-                wgpu_frame
-                    .encoder
-                    .begin_render_pass(&wgpu::RenderPassDescriptor {
-                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view: wgpu_frame.texture_view,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: wgpu::LoadOp::Load,
-                                store: wgpu::StoreOp::Store,
-                            },
-                        })],
-                        depth_stencil_attachment: None,
-                        label: Some("egui render pass"),
-                        timestamp_writes: None,
-                        occlusion_query_set: None,
-                    });
+            let mut render_pass = wgpu_frame
+                .encoder
+                .begin_render_pass(&wgpu::RenderPassDescriptor {
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: wgpu_frame.texture_view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    label: Some("egui render pass"),
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                })
+                .forget_lifetime();
 
             self.renderer
                 .render(&mut render_pass, &paint_jobs, &screen_descriptor);

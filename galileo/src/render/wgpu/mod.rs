@@ -597,6 +597,8 @@ impl WgpuRenderer {
             return;
         }
 
+        log::info!("View: {:#?}", view);
+
         self.render_map(map, view);
     }
 

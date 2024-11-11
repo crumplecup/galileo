@@ -18,7 +18,7 @@ use winit::window::Window;
 
 pub struct GalileoState {
     input_handler: WinitInputHandler,
-    event_processor: EventProcessor,
+    // event_processor: EventProcessor,
     renderer: Arc<RwLock<WgpuRenderer>>,
     map: Arc<RwLock<galileo::Map>>,
     pointer_position: Arc<RwLock<Point2d>>,
@@ -81,7 +81,7 @@ impl GalileoState {
 
         GalileoState {
             input_handler,
-            event_processor,
+            // event_processor,
             renderer,
             map,
             pointer_position,
@@ -105,30 +105,34 @@ impl GalileoState {
 
     pub fn render(&self, wgpu_frame: &WgpuFrame<'_>) {
         let galileo_map = self.map.read().unwrap();
+        tracing::info!("Galileo map read.");
         galileo_map.load_layers();
+        tracing::info!("Layers loaded.");
 
         self.renderer
             .write()
             .expect("poisoned lock")
             .render_to_texture_view(&galileo_map, wgpu_frame.texture_view);
+        tracing::info!("Layers rendered.");
     }
 
-    pub fn handle_event(&mut self, event: &winit::event::WindowEvent) {
-        // Phone emulator in browsers works funny with scaling, using this code fixes it.
-        // But my real phone works fine without it, so it's commented out for now, and probably
-        // should be deleted later, when we know that it's not needed on any devices.
-
-        // #[cfg(target_arch = "wasm32")]
-        // let scale = window.scale_factor();
-        //
-        // #[cfg(not(target_arch = "wasm32"))]
-        let scale = 1.0;
-
-        if let Some(raw_event) = self.input_handler.process_user_input(event, scale) {
-            let mut map = self.map.write().expect("poisoned lock");
-            self.event_processor.handle(raw_event, &mut map);
-        }
-    }
+    // moved to 'App::delegate'
+    // pub fn handle_event(&mut self, event: &winit::event::WindowEvent) {
+    //     // Phone emulator in browsers works funny with scaling, using this code fixes it.
+    //     // But my real phone works fine without it, so it's commented out for now, and probably
+    //     // should be deleted later, when we know that it's not needed on any devices.
+    //
+    //     // #[cfg(target_arch = "wasm32")]
+    //     // let scale = window.scale_factor();
+    //     //
+    //     // #[cfg(not(target_arch = "wasm32"))]
+    //     let scale = 1.0;
+    //
+    //     if let Some(raw_event) = self.input_handler.process_user_input(event, scale) {
+    //         let mut map = self.map.write().expect("poisoned lock");
+    //         self.event_processor.handle(raw_event, &mut map);
+    //     }
+    // }
 
     pub fn positions(&self) -> Positions {
         let pointer_position = *self.pointer_position.read().expect("poisoned lock");
@@ -137,5 +141,17 @@ impl GalileoState {
             pointer_position: view.screen_to_map_geo(pointer_position),
             map_center_position: view.position(),
         }
+    }
+
+    pub fn input_handler_mut(&mut self) -> &mut galileo::winit::WinitInputHandler {
+        &mut self.input_handler
+    }
+
+    pub fn map(&self) -> &Arc<RwLock<galileo::Map>> {
+        &self.map
+    }
+
+    pub fn pointer_position(&self) -> Arc<RwLock<Point2d>> {
+        self.pointer_position.clone()
     }
 }
